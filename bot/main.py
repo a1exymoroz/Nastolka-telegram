@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler
 
-from bot.handlers import help_command, id_command, start_command
+from bot.handlers import help_command, history_command, id_command, start_command
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    load_dotenv()
+    load_dotenv(".env.local")
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
@@ -23,6 +23,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("id", id_command))
+    application.add_handler(CommandHandler("history", history_command))
 
     logger.info("Nastolka bot starting (long polling)")
     application.run_polling()
