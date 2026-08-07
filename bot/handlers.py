@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
 
-COMMANDS = ["/start", "/help"]
+COMMANDS = ["/start", "/help", "/id"]
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -21,3 +21,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(
         "Available commands:\n" + "\n".join(COMMANDS)
     )
+
+
+async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    logger.info("chat.id=%s", chat_id)
+    await update.message.reply_text(f"This chat's id is {chat_id}")

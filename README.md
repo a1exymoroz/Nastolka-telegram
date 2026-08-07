@@ -8,6 +8,7 @@ Runs as its own long-lived process using long polling (no public URL/webhook nee
 
 - `/start` — greets the user and explains what the bot does
 - `/help` — lists available commands
+- `/id` — replies with the current chat's id, for linking it to a Nastolka location (see [Nastolka-api](https://github.com/a1exymoroz/Nastolka-api)'s "Telegram notifications" docs)
 
 ## Local setup
 
