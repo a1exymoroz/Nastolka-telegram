@@ -1,5 +1,7 @@
 import logging
 import os
+from datetime import datetime, timezone
+from functools import wraps
 
 import httpx
 from telegram import Update
@@ -16,11 +18,39 @@ COMMAND_DESCRIPTIONS = [
     ("history", "Show the 5 most recent games logged for this location"),
 ]
 
+MAX_MESSAGE_AGE_SECONDS = 5
+
 
 def is_prod() -> bool:
     return os.environ.get("APP_ENV", "local").lower() == "prod"
 
 
+def skip_stale_messages(handler):
+    """Ignore updates older than MAX_MESSAGE_AGE_SECONDS.
+
+    On redeploy, Telegram delivers any backlog of queued updates (webhook
+    retries or pending polling updates) all at once, which otherwise makes
+    the bot reply to a burst of stale commands.
+    """
+
+    @wraps(handler)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        message = update.effective_message
+        if message is not None and message.date is not None:
+            age = (datetime.now(timezone.utc) - message.date).total_seconds()
+            if age > MAX_MESSAGE_AGE_SECONDS:
+                logger.info(
+                    "Skipping stale update (age=%.1fs) chat.id=%s",
+                    age,
+                    update.effective_chat.id if update.effective_chat else None,
+                )
+                return
+        await handler(update, context)
+
+    return wrapper
+
+
+@skip_stale_messages
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("chat.id=%s", update.effective_chat.id)
     await update.message.reply_text(
@@ -29,18 +59,21 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     )
 
 
+@skip_stale_messages
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("chat.id=%s", update.effective_chat.id)
     lines = [f"/{cmd} — {desc}" for cmd, desc in COMMAND_DESCRIPTIONS]
     await update.message.reply_text("Available commands:\n" + "\n".join(lines))
 
 
+@skip_stale_messages
 async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     logger.info("chat.id=%s", chat_id)
     await update.message.reply_text(f"This chat's id is {chat_id}")
 
 
+@skip_stale_messages
 async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     try:
