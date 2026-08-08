@@ -9,7 +9,12 @@ from bot.api import fetch_recent_history
 
 logger = logging.getLogger(__name__)
 
-COMMANDS = ["/start", "/help", "/id", "/history"]
+COMMAND_DESCRIPTIONS = [
+    ("start", "Greet me and explain what I do"),
+    ("help", "List available commands"),
+    ("id", "Get this chat's id, for linking to a Nastolka location"),
+    ("history", "Show the 5 most recent games logged for this location"),
+]
 
 
 def is_prod() -> bool:
@@ -26,9 +31,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("chat.id=%s", update.effective_chat.id)
-    await update.message.reply_text(
-        "Available commands:\n" + "\n".join(COMMANDS)
-    )
+    lines = [f"/{cmd} — {desc}" for cmd, desc in COMMAND_DESCRIPTIONS]
+    await update.message.reply_text("Available commands:\n" + "\n".join(lines))
 
 
 async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
