@@ -122,7 +122,7 @@ def history_link(entry: dict) -> str | None:
     if location_id is None or history_id is None or not base_url:
         return None
 
-    return f"{base_url}/locations/{location_id}/history/{history_id}"
+    return f"{base_url.rstrip('/')}/locations/{location_id}/history/{history_id}"
 
 
 def format_player(player: dict) -> str:
