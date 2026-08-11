@@ -36,15 +36,31 @@ On startup the bot also registers its command list with Telegram (`set_my_comman
 
 ## Production
 
-Deploy the `Dockerfile` as a second [Northflank](https://northflank.com/) service, alongside `Nastolka-api`:
+Deployed to [Google Cloud Run](https://cloud.google.com/run) — a free, scale-to-zero container host well suited to this bot's low, bursty traffic (idle time costs nothing; this workload stays well within the monthly free tier).
 
-1. In the same Northflank project, create a **Service** → source **Deployment**, build a Docker image from this repo, branch `main`, Dockerfile path `/Dockerfile`.
-2. Add a public port mapping for port `8080` (HTTP) — Northflank terminates TLS at the edge, so its public URL is already HTTPS. This is required now that the bot receives updates via webhook instead of polling.
-3. Set runtime environment variables:
-   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_SECRET` (same values as configured on the `Nastolka-api` service)
-   - `NASTOLKA_API_BASE_URL` (the `Nastolka-api` service's public Northflank URL)
-   - `APP_ENV=prod`
-   - `WEBHOOK_URL` — this service's public Northflank URL (e.g. `https://<service>.northflank.app`)
-   - `PORT=8080`
-   - `TELEGRAM_WEBHOOK_SECRET` — a random string; Telegram echoes it back on every webhook request so the bot can reject spoofed calls
-4. Every push to `main` rebuilds and redeploys automatically, same as `Nastolka-api`. On boot the bot registers its webhook URL with Telegram automatically (via `run_webhook`), so no manual `setWebhook` call is needed.
+1. One-time setup: a GCP project with billing enabled (required by Cloud Run even though usage stays free), with `run.googleapis.com`, `cloudbuild.googleapis.com`, and `secretmanager.googleapis.com` enabled, and `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_SECRET` / `TELEGRAM_WEBHOOK_SECRET` stored in Secret Manager.
+2. Deploy straight from source (Cloud Build uses the repo's `Dockerfile`):
+   ```bash
+   gcloud run deploy nastolka-bot \
+     --source . \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --port 8080 \
+     --min-instances 0 --max-instances 1 \
+     --memory 256Mi --cpu 1 \
+     --set-env-vars APP_ENV=prod,NASTOLKA_API_BASE_URL=<Nastolka-api public URL> \
+     --set-secrets TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,TELEGRAM_BOT_SECRET=telegram-bot-secret:latest,TELEGRAM_WEBHOOK_SECRET=telegram-webhook-secret:latest
+   ```
+   `bot.__version__` (in `bot/__init__.py`) is logged on startup (`Nastolka bot version=<version> starting...`) so you can tell from the logs which release is running — bump it by hand when you cut a new release.
+   `--allow-unauthenticated` is required since Telegram calls the webhook with no GCP credentials — request authenticity instead relies on the bot token embedded in the URL path plus the `TELEGRAM_WEBHOOK_SECRET` header check (see `bot/main.py`).
+3. Grab the assigned URL and set it as `WEBHOOK_URL` so the bot switches into webhook mode and self-registers with Telegram on next boot (via `run_webhook` — no manual `setWebhook` call needed):
+   ```bash
+   URL=$(gcloud run services describe nastolka-bot --region us-central1 --format "value(status.url)")
+   gcloud run services update nastolka-bot --region us-central1 \
+     --set-env-vars WEBHOOK_URL=$URL,APP_ENV=prod,NASTOLKA_API_BASE_URL=<Nastolka-api public URL>
+   ```
+4. Every push to `main` redeploys automatically via `.github/workflows/deploy.yml`, which builds and deploys straight from source using [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation) — GitHub Actions impersonates a dedicated `github-deployer` service account with no downloaded key file. The provider's attribute condition restricts impersonation to this exact repo. Config lives in repo variables (`GCP_PROJECT_ID`, `GCP_WIF_PROVIDER`, `GCP_DEPLOYER_SA`, `CLOUD_RUN_URL`, `NASTOLKA_API_BASE_URL`).
+
+Note: with `--min-instances 0`, the very first request after an idle period pays a cold-start cost; `MAX_MESSAGE_AGE_SECONDS` in `bot/handlers.py` is set high enough to tolerate that without dropping the message.
+
+There's also a $1-equivalent (4 PLN) billing budget on the project with a `budget-guard` Cloud Function that scales the service to 0 instances if it's ever reached, as a spend safety net independent of this deploy flow.

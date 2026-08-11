@@ -18,7 +18,7 @@ COMMAND_DESCRIPTIONS = [
     ("history", "Show the 5 most recent games logged for this location"),
 ]
 
-MAX_MESSAGE_AGE_SECONDS = 5
+MAX_MESSAGE_AGE_SECONDS = 20  # headroom for scale-to-zero cold starts (e.g. Cloud Run)
 
 
 def is_prod() -> bool:

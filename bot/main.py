@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from telegram import BotCommand
 from telegram.ext import Application, CommandHandler
 
+from bot import __version__
 from bot.handlers import (
     COMMAND_DESCRIPTIONS,
     help_command,
@@ -42,7 +43,7 @@ def main() -> None:
     if webhook_url:
         port = int(os.environ.get("PORT", "8080"))
         secret_token = os.environ.get("TELEGRAM_WEBHOOK_SECRET") or None
-        logger.info("Nastolka bot starting (webhook on port %s)", port)
+        logger.info("Nastolka bot version=%s starting (webhook on port %s)", __version__, port)
         application.run_webhook(
             listen="0.0.0.0",
             port=port,
@@ -51,7 +52,7 @@ def main() -> None:
             secret_token=secret_token,
         )
     else:
-        logger.info("Nastolka bot starting (long polling)")
+        logger.info("Nastolka bot version=%s starting (long polling)", __version__)
         application.run_polling()
 
 
