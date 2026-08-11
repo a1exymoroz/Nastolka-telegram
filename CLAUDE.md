@@ -12,17 +12,27 @@ then implementation, then PR:
    git merge --ff-only origin/main
    git checkout -b <type>/<short-description>   # feature/, fix/, docs/, chore/
    ```
-2. **Create an issue** describing the work, add it to the `Nastolka` GitHub Project, and set
-   its Sprint to the currently active iteration:
+2. **Create an issue** describing the work, add it to the `Nastolka` GitHub Project (owner
+   `a1exymoroz`), and set its Sprint to the currently active iteration. None of the ids below
+   are fixed — look each one up fresh, every time:
    ```bash
+   # Project number, and the Sprint field's own id
+   gh project list --owner a1exymoroz                       # find the Nastolka project's number
+   gh project field-list <PROJECT_NUMBER> --owner a1exymoroz # find the "Sprint" field's id
+
+   # Create the issue and add it to the project
    gh issue create --repo a1exymoroz/Nastolka-telegram \
      --title "..." --body "..." --project "Nastolka"
-   ```
-   Then set the Sprint field (a `ProjectV2IterationField`, so it needs the project item id,
-   not the issue number):
-   ```bash
-   # Find the item id for the issue you just created
-   gh project item-list 3 --owner a1exymoroz --limit 200 --format json \
+
+   # The currently active iteration (the one under "iterations", not "completedIterations")
+   gh api graphql -f query='
+   { node(id: "<SPRINT_FIELD_ID>") {
+       ... on ProjectV2IterationField { configuration { iterations { id title startDate duration } } }
+   } }'
+
+   # The project's own node id, and the item id for the issue just created
+   gh project view <PROJECT_NUMBER> --owner a1exymoroz --format json --jq .id
+   gh project item-list <PROJECT_NUMBER> --owner a1exymoroz --limit 200 --format json \
      | python3 -c "
    import json, sys
    data = json.load(sys.stdin)
@@ -32,23 +42,13 @@ then implementation, then PR:
            print(i['id'])
    "
 
-   # Find the currently active iteration id (the one under "iterations", not "completedIterations")
-   gh api graphql -f query='
-   { node(id: "PVTIF_lAHOAbKo9c4Be-ouzhaQ2Lc") {
-       ... on ProjectV2IterationField { configuration { iterations { id title startDate duration } } }
-   } }'
-
-   # Set it
-   gh project item-edit --id <ITEM_ID> \
-     --field-id "PVTIF_lAHOAbKo9c4Be-ouzhaQ2Lc" \
-     --project-id "PVT_kwHOAbKo9c4Be-ou" \
-     --iteration-id <ITERATION_ID>
+   # Set the Sprint field on that item
+   gh project item-edit --id <ITEM_ID> --field-id <SPRINT_FIELD_ID> \
+     --project-id <PROJECT_NODE_ID> --iteration-id <ITERATION_ID>
    ```
-   (Project `Nastolka` = project number 3, owner `a1exymoroz`, node id
-   `PVT_kwHOAbKo9c4Be-ou`. `PVTIF_lAHOAbKo9c4Be-ouzhaQ2Lc` identifies the Sprint *field*
-   itself and is stable — but the *iteration* id (e.g. `13a60aa3` for "Sprint 2") is **not**
-   fixed: a new one is minted every time a new sprint starts, so always look it up fresh with
-   the GraphQL query above rather than reusing an old value.)
+   The Sprint field's id is stable across sprints, but the *iteration* id (which sprint is
+   "current") is not — a new one is minted every time a new sprint starts, so always resolve it
+   fresh via the GraphQL query rather than reusing a value from a previous session.
 3. **Do the work** on the branch, committing normally.
 4. **Open a PR** against `main` that references the issue (e.g. `Closes #<N>` in the body), via
    `gh pr create`.
