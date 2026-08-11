@@ -45,7 +45,10 @@ then implementation, then PR:
      --iteration-id <ITERATION_ID>
    ```
    (Project `Nastolka` = project number 3, owner `a1exymoroz`, node id
-   `PVT_kwHOAbKo9c4Be-ou`. The Sprint field id above is fixed; it won't change.)
+   `PVT_kwHOAbKo9c4Be-ou`. `PVTIF_lAHOAbKo9c4Be-ouzhaQ2Lc` identifies the Sprint *field*
+   itself and is stable — but the *iteration* id (e.g. `13a60aa3` for "Sprint 2") is **not**
+   fixed: a new one is minted every time a new sprint starts, so always look it up fresh with
+   the GraphQL query above rather than reusing an old value.)
 3. **Do the work** on the branch, committing normally.
 4. **Open a PR** against `main` that references the issue (e.g. `Closes #<N>` in the body), via
    `gh pr create`.
