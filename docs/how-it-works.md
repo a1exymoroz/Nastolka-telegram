@@ -36,10 +36,10 @@ sequenceDiagram
     participant Bot as bot/main.py + bot/handlers.py
     participant API as Nastolka-api
 
-    TG->>CR: POST /<bot token>  (update: /start)
+    TG->>CR: POST webhook path (contains bot token) — update: /start
     Note over CR: instance was at 0 → cold start
     CR->>Bot: run_webhook() delivers the update
-    Bot->>Bot: skip_stale_messages() checks age < 20s
+    Bot->>Bot: skip_stale_messages() checks age under 20s
     Bot->>TG: sendMessage (reply)
     Note over Bot,API: /history instead calls fetch_recent_history()
     Bot->>API: GET recent games for this chat
@@ -113,7 +113,7 @@ Cloud Run                    max-instances → 0
 ```mermaid
 sequenceDiagram
     participant Billing as Cloud Billing
-    participant Budget as Budget (4 PLN, ~$1)
+    participant Budget as Budget (4 PLN, approx 1 USD)
     participant PS as Pub/Sub (billing-budget-alerts)
     participant Fn as budget-guard function
     participant CR as Cloud Run (nastolka-bot)
@@ -123,7 +123,7 @@ sequenceDiagram
     PS->>Fn: trigger budget_guard()
     Fn->>Fn: cost >= budget?
     Fn->>CR: update_service(max_instance_count=0)
-    Note over CR: no new instances start;<br/>service effectively paused
+    Note over CR: no new instances start, service effectively paused
 ```
 
 This only touches `nastolka-bot`'s max instance count — not the GCP project, not billing
