@@ -107,11 +107,22 @@ async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 def format_entry(entry: dict) -> str:
     game = entry.get("gameName") or "Unknown game"
     players = entry.get("players") or []
-    if not players:
-        return game
+    summary = game if not players else f"{game} — " + ", ".join(
+        format_player(player) for player in players
+    )
 
-    names = ", ".join(format_player(player) for player in players)
-    return f"{game} — {names}"
+    link = history_link(entry)
+    return f"{summary}\n  {link}" if link else summary
+
+
+def history_link(entry: dict) -> str | None:
+    location_id = entry.get("locationId")
+    history_id = entry.get("id")
+    base_url = os.environ.get("WEBAPP_BASE_URL")
+    if location_id is None or history_id is None or not base_url:
+        return None
+
+    return f"{base_url}/locations/{location_id}/history/{history_id}"
 
 
 def format_player(player: dict) -> str:
