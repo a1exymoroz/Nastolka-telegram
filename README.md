@@ -22,17 +22,14 @@ On startup the bot also registers its command list with Telegram (`set_my_comman
    - `NASTOLKA_API_BASE_URL` — where the backend is running (defaults to `http://localhost:8090`)
    - `APP_ENV` — `local` (default) or `prod`. Since dev and prod currently share one bot token, `/history` replies (and, on the backend side, history-added notifications) are prefixed with `🧪 [DEV]` whenever this isn't `prod`, so you can tell which environment triggered a message.
    - `WEBHOOK_URL`, `PORT`, `TELEGRAM_WEBHOOK_SECRET` — leave these unset for local dev; the bot uses long polling when `WEBHOOK_URL` is empty. See Production below.
-3. Install dependencies:
+3. Run it:
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
-   pip install -r requirements.txt
+   ./scripts/run_local.sh      # Windows: .\scripts\run_local.ps1
    ```
-4. Run the bot:
-   ```bash
-   python -m bot.main
-   ```
-5. Message the bot on Telegram and try `/start` and `/help`.
+   This creates `.venv` if it doesn't exist yet, installs/updates dependencies, and starts the
+   bot with long polling. (Equivalent to `python -m venv .venv`, activating it, `pip install -r
+   requirements.txt`, then `python -m bot.main`, if you'd rather run those steps by hand.)
+4. Message the bot on Telegram and try `/start` and `/help`.
 
 ## Production
 
