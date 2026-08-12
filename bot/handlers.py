@@ -1,3 +1,4 @@
+import html
 import logging
 import os
 from datetime import datetime, timezone
@@ -5,6 +6,7 @@ from functools import wraps
 
 import httpx
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from bot.api import fetch_recent_history
@@ -19,6 +21,7 @@ COMMAND_DESCRIPTIONS = [
 ]
 
 MAX_MESSAGE_AGE_SECONDS = 20  # headroom for scale-to-zero cold starts (e.g. Cloud Run)
+MEDALS = {1: "🥇 ", 2: "🥈 ", 3: "🥉 "}
 
 
 def is_prod() -> bool:
@@ -94,25 +97,25 @@ async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("No games logged yet for this location.")
         return
 
-    lines = ["Recent games:"]
-    for entry in entries:
-        lines.append(f"• {format_entry(entry)}")
-
-    text = "\n".join(lines)
+    text = "🎲 <b>Recent games</b>\n\n" + "\n\n".join(format_entry(entry) for entry in entries)
     if not is_prod():
         text = f"🧪 [DEV]\n{text}"
-    await update.message.reply_text(text)
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 
 def format_entry(entry: dict) -> str:
-    game = entry.get("gameName") or "Unknown game"
+    game = html.escape(entry.get("gameName") or "Unknown game")
     players = entry.get("players") or []
-    summary = game if not players else f"{game} — " + ", ".join(
-        format_player(player) for player in players
-    )
+
+    lines = [f"<b>{game}</b>"]
+    if players:
+        lines.append(" · ".join(format_player(player) for player in players))
 
     link = history_link(entry)
-    return f"{summary}\n  {link}" if link else summary
+    if link:
+        lines.append(f'🔗 <a href="{html.escape(link)}">View details</a>')
+
+    return "\n".join(lines)
 
 
 def history_link(entry: dict) -> str | None:
@@ -126,6 +129,7 @@ def history_link(entry: dict) -> str | None:
 
 
 def format_player(player: dict) -> str:
-    username = player.get("username", "?")
+    username = html.escape(player.get("username", "?"))
     placement = player.get("placement")
-    return f"{username} (#{placement})" if placement else username
+    prefix = MEDALS.get(placement, f"#{placement} " if placement else "")
+    return f"{prefix}{username}"

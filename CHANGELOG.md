@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-12
+
+### Changed
+
+- `/history` message now uses Telegram HTML formatting: bold game names, medal emojis
+  (🥇🥈🥉) for placements 1-3, and the history link rendered as a clickable "View details"
+  label instead of a bare URL.
+
 ## [0.1.2] - 2026-08-11
 
 ### Added
